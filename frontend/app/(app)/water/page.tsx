@@ -100,10 +100,30 @@ export default function WaterPage() {
     monthlyMap[month] = (monthlyMap[month] || 0) + (r.consumption || 0);
   });
 
-  const monthlyWaterData = Object.entries(monthlyMap).map(([month, usage]) => ({
-    month,
-    usage,
-  }));
+  const monthOrder = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const monthlyWaterData = Object.entries(monthlyMap)
+    .map(([month, usage]) => ({
+      month,
+      usage,
+    }))
+    .sort(
+      (a, b) =>
+        monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month),
+    );
 
   // ================= EXPORT =================
   function exportCSV() {

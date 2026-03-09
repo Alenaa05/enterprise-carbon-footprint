@@ -13,11 +13,19 @@ const TABLE = process.env.ENERGY_TABLE || "EnergyTable"
 const client = new DynamoDBClient({ region: REGION })
 const db = DynamoDBDocumentClient.from(client)
 
-// 🔹 GET ALL ENERGY RECORDS
-export async function getAllEnergy() {
+// 🔹 GET ALL ENERGY RECORDS (optionally filtered by organization)
+export async function getAllEnergy(organizationId?: string | null) {
   const res = await db.send(
     new ScanCommand({
       TableName: TABLE,
+      FilterExpression: organizationId
+        ? "attribute_not_exists(organizationId) OR organizationId = :orgId"
+        : undefined,
+      ExpressionAttributeValues: organizationId
+        ? {
+            ":orgId": organizationId,
+          }
+        : undefined,
     })
   )
 
@@ -28,6 +36,7 @@ export async function getAllEnergy() {
 export async function createEnergy(data: any) {
   const item = {
     id: uuidv4(),
+    organizationId: data.organizationId ?? null,
     source: data.source,
     facility: data.facility,
     consumption: data.consumption,
@@ -57,3 +66,4 @@ export async function deleteEnergy(id: string) {
 
   return { success: true }
 }
+

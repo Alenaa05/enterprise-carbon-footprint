@@ -175,6 +175,14 @@ functions:
           method: delete
           cors: true
 
+  exportSuppliers:
+    handler: src/handlers/suppliers.exportSuppliers
+    events:
+      - http:
+          path: suppliers/export
+          method: get
+          cors: true
+
   # Compliance
   getCompliance:
     handler: src/handlers/compliance.getCompliance

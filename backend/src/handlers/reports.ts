@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { db } from "../services/dynamo";
 import { v4 as uuid } from "uuid";
+import { getOrganizationId } from "../utils/getUserId";
 
 const TABLE = process.env.REPORTS_TABLE!;
 
@@ -16,64 +17,154 @@ const headers = {
 
 /* GET REPORTS */
 
-export const getReports = async () => {
-  const result = await db.send(
-    new ScanCommand({
-      TableName: TABLE,
-    }),
-  );
+export const getReports = async (event: any) => {
+  try {
+    const organizationId = getOrganizationId(event);
 
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify(result.Items || []),
-  };
+    const result = await db.send(
+      new ScanCommand({
+        TableName: TABLE,
+        FilterExpression:
+          "attribute_not_exists(organizationId) OR organizationId = :orgId",
+        ExpressionAttributeValues: {
+          ":orgId": organizationId,
+        },
+      }),
+    );
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(result.Items || []),
+    };
+  } catch (err) {
+    console.error("getReports error:", err);
+
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: "Failed to fetch reports" }),
+    };
+  }
 };
 
 /* GENERATE REPORT */
 
 export const generateReport = async (event: any) => {
-  const body = JSON.parse(event.body);
+  try {
+    const body = JSON.parse(event.body || "{}");
+    const organizationId = getOrganizationId(event);
 
-  const id = uuid();
+    const id = uuid();
 
-  const item = {
-    id,
-    title: body.title,
-    generated: new Date().toISOString(),
-    emissions: body.emissions,
-    renewableEnergy: body.renewableEnergy,
-    waterUsage: body.waterUsage,
-    wasteRecycled: body.wasteRecycled,
-    downloads: 0,
-  };
+    const item = {
+      id,
+      organizationId,
+      title: body.title,
+      type: body.type || "sustainability",
+      status: body.status || "published",
+      generated: new Date().toISOString(),
+      emissions: body.emissions,
+      renewableEnergy: body.renewableEnergy,
+      waterUsage: body.waterUsage,
+      wasteRecycled: body.wasteRecycled,
+      downloads: 0,
+    };
 
-  await db.send(
-    new PutCommand({
-      TableName: TABLE,
-      Item: item,
-    }),
-  );
+    await db.send(
+      new PutCommand({
+        TableName: TABLE,
+        Item: item,
+      }),
+    );
 
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify(item),
-  };
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(item),
+    };
+  } catch (err) {
+    console.error("generateReport error:", err);
+
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: "Failed to generate report" }),
+    };
+  }
+};
+
+/* CREATE REPORT (alias of generate for POST /reports) */
+
+export const createReport = async (event: any) => {
+  return generateReport(event);
+};
+
+/* FILTER REPORTS */
+
+export const filterReports = async (event: any) => {
+  try {
+    const organizationId = getOrganizationId(event);
+    const type = event.queryStringParameters?.type;
+    const status = event.queryStringParameters?.status;
+    const q = (event.queryStringParameters?.q || "").toLowerCase();
+
+    const result = await db.send(
+      new ScanCommand({
+        TableName: TABLE,
+        FilterExpression:
+          "attribute_not_exists(organizationId) OR organizationId = :orgId",
+        ExpressionAttributeValues: {
+          ":orgId": organizationId,
+        },
+      }),
+    );
+
+    let items: any[] = result.Items || [];
+
+    if (type) items = items.filter((r) => (r.type || "") === type);
+    if (status) items = items.filter((r) => (r.status || "") === status);
+    if (q) items = items.filter((r) => (r.title || "").toLowerCase().includes(q));
+
+    items.sort(
+      (a, b) => new Date(b.generated).getTime() - new Date(a.generated).getTime(),
+    );
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(items),
+    };
+  } catch (err) {
+    console.error("filterReports error:", err);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: "Failed to filter reports" }),
+    };
+  }
 };
 
 /* EXPORT ALL REPORTS */
 
-export const exportReports = async () => {
-  const result = await db.send(
-    new ScanCommand({
-      TableName: TABLE,
-    }),
-  );
+export const exportReports = async (event: any) => {
+  try {
+    const organizationId = getOrganizationId(event);
 
-  const reports = result.Items || [];
+    const result = await db.send(
+      new ScanCommand({
+        TableName: TABLE,
+        FilterExpression:
+          "attribute_not_exists(organizationId) OR organizationId = :orgId",
+        ExpressionAttributeValues: {
+          ":orgId": organizationId,
+        },
+      }),
+    );
 
-  let html = `
+    const reports = result.Items || [];
+
+    let html = `
   <html>
   <head>
   <title>Sustainability Reports</title>
@@ -103,8 +194,8 @@ export const exportReports = async () => {
   <h1>Sustainability Reports</h1>
   `;
 
-  reports.forEach((r: any) => {
-    html += `
+    reports.forEach((r: any) => {
+      html += `
     <div class="report">
       <h2>${r.title}</h2>
       <p><b>Generated:</b> ${new Date(r.generated).toLocaleDateString()}</p>
@@ -114,58 +205,68 @@ export const exportReports = async () => {
       <p><b>Waste Recycled:</b> ${r.wasteRecycled}%</p>
     </div>
     `;
-  });
+    });
 
-  html += `
+    html += `
   </body>
   </html>
   `;
 
-  return {
-    statusCode: 200,
-    headers: {
-      "Content-Type": "text/html",
-      "Content-Disposition": "attachment; filename=reports.html",
-      "Access-Control-Allow-Origin": "*",
-    },
-    body: html,
-  };
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "text/html",
+        "Content-Disposition": "attachment; filename=reports.html",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: html,
+    };
+  } catch (err) {
+    console.error("exportReports error:", err);
+
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: "Failed to export reports" }),
+    };
+  }
 };
 
 /* DOWNLOAD SINGLE REPORT */
 
 export const downloadReport = async (event: any) => {
-  const id = event.pathParameters.id;
+  try {
+    const id = event.pathParameters.id;
 
-  const result = await db.send(
-    new GetCommand({
-      TableName: TABLE,
-      Key: { id },
-    }),
-  );
+    const result = await db.send(
+      new GetCommand({
+        TableName: TABLE,
+        Key: { id },
+      }),
+    );
 
-  const report: any = result.Item;
+    const report: any = result.Item;
 
-  if (!report) {
-    return {
-      statusCode: 404,
-      headers,
-      body: JSON.stringify({ message: "Report not found" }),
-    };
-  }
+    if (!report) {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ message: "Report not found" }),
+      };
+    }
 
-  await db.send(
-    new UpdateCommand({
-      TableName: TABLE,
-      Key: { id },
-      UpdateExpression: "SET downloads = downloads + :inc",
-      ExpressionAttributeValues: {
-        ":inc": 1,
-      },
-    }),
-  );
+    await db.send(
+      new UpdateCommand({
+        TableName: TABLE,
+        Key: { id },
+        UpdateExpression: "SET downloads = downloads + :inc",
+        ExpressionAttributeValues: {
+          ":inc": 1,
+        },
+      }),
+    );
 
-  const html = `
+    const html = `
   <html>
 
   <head>
@@ -253,13 +354,22 @@ export const downloadReport = async (event: any) => {
   </html>
   `;
 
-  return {
-    statusCode: 200,
-    headers: {
-      "Content-Type": "text/html",
-      "Content-Disposition": `attachment; filename=${report.title}.html`,
-      "Access-Control-Allow-Origin": "*",
-    },
-    body: html,
-  };
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "text/html",
+        "Content-Disposition": `attachment; filename=${report.title}.html`,
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: html,
+    };
+  } catch (err) {
+    console.error("downloadReport error:", err);
+
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: "Failed to download report" }),
+    };
+  }
 };

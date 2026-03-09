@@ -179,6 +179,26 @@ async function assessSupplier(id: string) {
   });
 }
 
+async function deleteSupplier(id: string) {
+  return request(`/suppliers/${id}`, {
+    method: "DELETE",
+  });
+}
+
+async function exportSuppliers() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/suppliers/export`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `API error ${res.status}`);
+  }
+  return res;
+}
+
 /* =========================
    GOALS
 ========================= */
@@ -213,6 +233,141 @@ async function updateGoal(id: string, progress: number) {
 }
 
 /* =========================
+   COMPLIANCE
+========================= */
+
+export type ComplianceRecord = {
+  id?: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  status: string;
+  lastAudit?: string | null;
+};
+
+async function getCompliance(): Promise<ComplianceRecord[]> {
+  return request("/compliance");
+}
+
+async function createCompliance(record: Partial<ComplianceRecord>) {
+  return request("/compliance", {
+    method: "POST",
+    body: JSON.stringify(record),
+  });
+}
+
+async function updateCompliance(id: string, record: Partial<ComplianceRecord>) {
+  return request(`/compliance/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(record),
+  });
+}
+
+async function deleteCompliance(id: string) {
+  return request(`/compliance/${id}`, {
+    method: "DELETE",
+  });
+}
+
+async function getComplianceRecommendations() {
+  return request("/compliance/recommendations");
+}
+
+/* =========================
+   TEAMS
+========================= */
+
+async function getTeams() {
+  return request("/teams");
+}
+
+async function createTeam(payload: any) {
+  return request("/teams", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+async function updateTeam(id: string, payload: any) {
+  return request(`/teams/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+async function filterTeams(projects: number) {
+  return request(`/teams/filter?projects=${projects}`);
+}
+
+async function exportTeams() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/teams/export`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `API error ${res.status}`);
+  }
+  return res;
+}
+
+/* =========================
+   REPORTS
+========================= */
+
+export type Report = {
+  id?: string;
+  title: string;
+  generated: string;
+  emissions: number;
+  renewableEnergy: number;
+  waterUsage: number;
+  wasteRecycled: number;
+  downloads?: number;
+};
+
+async function getReports(): Promise<Report[]> {
+  return request("/reports");
+}
+
+async function generateReport(payload: Partial<Report>) {
+  return request("/reports/generate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+async function exportReports() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/reports/export`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `API error ${res.status}`);
+  }
+  return res;
+}
+
+async function downloadReport(id: string) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/reports/${id}/download`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `API error ${res.status}`);
+  }
+  return res;
+}
+
+/* =========================
    EXPORT API
 ========================= */
 
@@ -232,7 +387,23 @@ export default {
   getSuppliers,
   createSupplier,
   assessSupplier,
+  deleteSupplier,
+  exportSuppliers,
   getGoals,
   createGoal,
   updateGoal,
+  getCompliance,
+  createCompliance,
+  updateCompliance,
+  deleteCompliance,
+  getComplianceRecommendations,
+  getTeams,
+  createTeam,
+  updateTeam,
+  filterTeams,
+  exportTeams,
+  getReports,
+  generateReport,
+  exportReports,
+  downloadReport,
 };

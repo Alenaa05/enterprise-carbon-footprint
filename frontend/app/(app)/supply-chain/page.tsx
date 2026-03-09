@@ -99,7 +99,25 @@ export default function SupplyChainPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2 bg-transparent">
+          <Button
+            variant="outline"
+            className="gap-2 bg-transparent"
+            onClick={async () => {
+              try {
+                const res = await api.exportSuppliers();
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "suppliers.csv";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              } catch (err) {
+                console.error("Supplier export failed", err);
+              }
+            }}
+          >
             <Download className="h-4 w-4" /> Export
           </Button>
           <Button

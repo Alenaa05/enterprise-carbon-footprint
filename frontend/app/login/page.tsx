@@ -66,7 +66,7 @@ export default function LoginPage() {
             Value: email,
           },
           {
-            Name: "custom:organization",
+            Name: "custom:Organisation",
             Value: organization,
           },
         ],

@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-
-const API = "http://localhost:4000/dev/compliance/recommendations"
+import api from "@/lib/api"
 
 export default function AIRecommendations() {
 
@@ -15,10 +14,8 @@ export default function AIRecommendations() {
 
       try {
 
-        const res = await fetch(API)
-        const data = await res.json()
-
-        setAdvice(data.advice)
+        const data = await api.getComplianceRecommendations()
+        setAdvice((data as any).advice ?? "")
 
       } catch (err) {
 

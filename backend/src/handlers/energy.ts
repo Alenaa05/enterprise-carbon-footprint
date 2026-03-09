@@ -4,18 +4,22 @@ import {
   createEnergy,
   deleteEnergy,
 } from "../services/energyService"
+import { getOrganizationId } from "../utils/getUserId"
+
+const HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+}
 
 // 🔹 GET /energy
-export const getEnergy: APIGatewayProxyHandler = async () => {
+export const getEnergy: APIGatewayProxyHandler = async (event) => {
   try {
-    const items = await getAllEnergy()
+    const organizationId = getOrganizationId(event)
+    const items = await getAllEnergy(organizationId)
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: HEADERS,
       body: JSON.stringify(items),
     }
   } catch (err) {
@@ -23,6 +27,7 @@ export const getEnergy: APIGatewayProxyHandler = async () => {
 
     return {
       statusCode: 500,
+      headers: HEADERS,
       body: JSON.stringify({ message: "Internal server error" }),
     }
   }
@@ -34,19 +39,18 @@ export const createEnergyRecord: APIGatewayProxyHandler = async (event) => {
     if (!event.body) {
       return {
         statusCode: 400,
+        headers: HEADERS,
         body: JSON.stringify({ message: "Missing request body" }),
       }
     }
 
+    const organizationId = getOrganizationId(event)
     const data = JSON.parse(event.body)
-    const created = await createEnergy(data)
+    const created = await createEnergy({ ...data, organizationId })
 
     return {
       statusCode: 201,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: HEADERS,
       body: JSON.stringify(created),
     }
   } catch (err) {
@@ -54,6 +58,7 @@ export const createEnergyRecord: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 500,
+      headers: HEADERS,
       body: JSON.stringify({ message: "Internal server error" }),
     }
   }
@@ -67,6 +72,7 @@ export const deleteEnergyRecord: APIGatewayProxyHandler = async (event) => {
     if (!id) {
       return {
         statusCode: 400,
+        headers: HEADERS,
         body: JSON.stringify({ message: "Missing id parameter" }),
       }
     }
@@ -75,9 +81,7 @@ export const deleteEnergyRecord: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: HEADERS,
       body: JSON.stringify({ success: true }),
     }
   } catch (err) {
@@ -85,6 +89,7 @@ export const deleteEnergyRecord: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 500,
+      headers: HEADERS,
       body: JSON.stringify({ message: "Internal server error" }),
     }
   }

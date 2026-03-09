@@ -11,8 +11,18 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Search, Settings, LogOut, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export function DashboardHeader() {
+  const router = useRouter()
+
+  function handleLogout() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token')
+    }
+    router.push('/login')
+  }
+
   return (
     <header className="border-b bg-white">
       <div className="flex h-16 items-center justify-between px-6">
@@ -40,12 +50,12 @@ export function DashboardHeader() {
                 <User className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile Settings</DropdownMenuItem>
               <DropdownMenuItem>Preferences</DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>

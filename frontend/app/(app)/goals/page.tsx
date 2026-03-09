@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Download, Filter, TrendingUp, Target } from "lucide-react";
 
-import api, { Goal } from "@/lib/api";
+import api, { Goal, Emission, EnergyRecord } from "@/lib/api";
 import AddGoalModal from "@/components/add-goal-modal";
 
 export default function GoalsPage() {
@@ -23,9 +23,29 @@ export default function GoalsPage() {
   const [goalModalOpen, setGoalModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [metrics, setMetrics] = useState<{
+    emissions: Emission[];
+    energy: EnergyRecord[];
+  }>({ emissions: [], energy: [] });
+  const [autoUpdated, setAutoUpdated] = useState(false);
 
   useEffect(() => {
     loadGoals();
+  }, []);
+
+  useEffect(() => {
+    async function loadMetrics() {
+      try {
+        const [emissions, energy] = await Promise.all([
+          api.getEmissions(),
+          api.getEnergy(),
+        ]);
+        setMetrics({ emissions: emissions || [], energy: energy || [] });
+      } catch (err) {
+        console.error("Failed to load metrics for goals", err);
+      }
+    }
+    loadMetrics();
   }, []);
 
   useEffect(() => {
@@ -45,6 +65,79 @@ export default function GoalsPage() {
 
     setLoading(false);
   }
+
+  const aggregated = useMemo(() => {
+    const totalEmissions = metrics.emissions.reduce(
+      (sum, e) => sum + (e.amount || 0),
+      0,
+    );
+    const totalEnergy = metrics.energy.reduce(
+      (sum, r) => sum + (r.consumption || 0),
+      0,
+    );
+    const renewableEnergy = metrics.energy
+      .filter((r) => r.source?.toLowerCase().includes("renewable"))
+      .reduce((sum, r) => sum + (r.consumption || 0), 0);
+
+    const renewableShare =
+      totalEnergy > 0 ? Math.round((renewableEnergy / totalEnergy) * 100) : 0;
+
+    return { totalEmissions, totalEnergy, renewableShare };
+  }, [metrics]);
+
+  useEffect(() => {
+    // simple placeholder “ML” progression model; only run once when data is ready
+    if (autoUpdated || goals.length === 0) return;
+    if (!metrics.emissions.length && !metrics.energy.length) return;
+
+    async function updateFromModel() {
+      try {
+        const updates = goals.map((g) => {
+          let progress = g.progress;
+
+          if (g.category === "carbon") {
+            // assume target is reduction vs current total emissions
+            const baseline = aggregated.totalEmissions || 1;
+            const targetReduction = g.target || 0;
+            const achieved = Math.min(
+              (targetReduction / baseline) * 100,
+              100,
+            );
+            progress = Math.round(achieved);
+          } else if (g.category === "energy") {
+            // map progress to renewable share vs target %
+            const targetShare = g.target || 100;
+            if (targetShare > 0) {
+              const achieved = Math.min(
+                (aggregated.renewableShare / targetShare) * 100,
+                100,
+              );
+              progress = Math.round(achieved);
+            }
+          }
+
+          let status: Goal["status"] = "on-track";
+          if (progress < 40) status = "behind";
+          else if (progress < 70) status = "at-risk";
+
+          return { id: g.id!, progress, status };
+        });
+
+        await Promise.all(
+          updates.map((u) => api.updateGoal(u.id, u.progress)),
+        );
+
+        // refresh goals with updated progress
+        await loadGoals();
+      } catch (err) {
+        console.error("Auto-progress update failed", err);
+      } finally {
+        setAutoUpdated(true);
+      }
+    }
+
+    updateFromModel();
+  }, [goals, metrics, aggregated, autoUpdated]);
 
   function exportGoals() {
     const csv = [

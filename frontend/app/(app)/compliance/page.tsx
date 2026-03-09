@@ -2,17 +2,11 @@
 
 import { useEffect, useState } from "react";
 import AIRecommendations from "@/components/AIRecommendations";
+import api, { ComplianceRecord } from "@/lib/api";
 
-type Regulation = {
-  id?: string;
-  title: string;
-  description: string;
-  dueDate: string;
+type Regulation = ComplianceRecord & {
   status: "Compliant" | "Pending" | "Non-Compliant";
-  lastAudit?: string;
 };
-
-const API = "http://localhost:4000/dev/compliance";
 
 export default function CompliancePage() {
   const [regulations, setRegulations] = useState<Regulation[]>([]);
@@ -30,10 +24,8 @@ export default function CompliancePage() {
 
   async function loadRegulations() {
     try {
-      const res = await fetch(API);
-      const data = await res.json();
-
-      setRegulations(data);
+      const data = await api.getCompliance();
+      setRegulations(data as Regulation[]);
     } catch (err) {
       console.error("Fetch error", err);
     }
@@ -46,13 +38,7 @@ export default function CompliancePage() {
   /* ---------------- CREATE ---------------- */
 
   async function handleSubmit() {
-    await fetch(API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
+    await api.createCompliance(form);
 
     setShowModal(false);
 
@@ -70,9 +56,7 @@ export default function CompliancePage() {
   /* ---------------- DELETE ---------------- */
 
   async function deleteRegulation(id: string) {
-    await fetch(`${API}/${id}`, {
-      method: "DELETE",
-    });
+    await api.deleteCompliance(id);
 
     loadRegulations();
   }

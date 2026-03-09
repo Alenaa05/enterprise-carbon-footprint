@@ -2,6 +2,7 @@ import { PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../services/dynamo";
 import { TABLES, CORS } from "../utils/env";
 import { v4 as uuid } from "uuid";
+import { getOrganizationId } from "../utils/getUserId";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": CORS.ORIGIN,
@@ -9,11 +10,18 @@ const CORS_HEADERS = {
   "Content-Type": "application/json",
 };
 
-export const getEmissions = async () => {
+export const getEmissions = async (event: any) => {
   try {
+    const organizationId = getOrganizationId(event);
+
     const result = await db.send(
       new ScanCommand({
         TableName: TABLES.EMISSIONS,
+        FilterExpression:
+          "attribute_not_exists(organizationId) OR organizationId = :orgId",
+        ExpressionAttributeValues: {
+          ":orgId": organizationId,
+        },
       })
     );
 
@@ -43,9 +51,11 @@ export const createEmission = async (event: any) => {
     }
 
     const body = JSON.parse(event.body);
+    const organizationId = getOrganizationId(event);
 
     const item = {
       id: uuid(),
+      organizationId,
       ...body,
       createdAt: new Date().toISOString(),
     };

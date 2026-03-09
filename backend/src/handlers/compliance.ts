@@ -8,6 +8,7 @@ import {
 import { db } from "../services/dynamo";
 import { v4 as uuid } from "uuid";
 import { generateRecommendations } from "../services/openai";
+import { getOrganizationId } from "../utils/getUserId";
 
 const TABLE = process.env.COMPLIANCE_TABLE!;
 
@@ -19,11 +20,18 @@ const headers = {
 
 /* ---------------- GET ALL ---------------- */
 
-export const getCompliance = async () => {
+export const getCompliance = async (event: any) => {
   try {
+    const organizationId = getOrganizationId(event);
+
     const result = await db.send(
       new ScanCommand({
         TableName: TABLE,
+        FilterExpression:
+          "attribute_not_exists(organizationId) OR organizationId = :orgId",
+        ExpressionAttributeValues: {
+          ":orgId": organizationId,
+        },
       }),
     );
 
@@ -48,9 +56,11 @@ export const getCompliance = async () => {
 export const createCompliance = async (event: any) => {
   try {
     const body = JSON.parse(event.body || "{}");
+    const organizationId = getOrganizationId(event);
 
     const item = {
       id: uuid(),
+      organizationId,
       title: body.title,
       description: body.description,
       dueDate: body.dueDate,
@@ -153,11 +163,18 @@ export const updateCompliance = async (event: any) => {
 
 /* ---------------- AI RECOMMENDATIONS ---------------- */
 
-export const getRecommendations = async () => {
+export const getRecommendations = async (event: any) => {
   try {
+    const organizationId = getOrganizationId(event);
+
     const result = await db.send(
       new ScanCommand({
         TableName: TABLE,
+        FilterExpression:
+          "attribute_not_exists(organizationId) OR organizationId = :orgId",
+        ExpressionAttributeValues: {
+          ":orgId": organizationId,
+        },
       }),
     );
 

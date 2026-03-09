@@ -2,6 +2,7 @@ import { ScanCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 import { db } from "../services/dynamo";
 import { v4 as uuid } from "uuid";
+import { getOrganizationId } from "../utils/getUserId";
 
 const TABLE = process.env.TEAMS_TABLE!;
 
@@ -12,10 +13,17 @@ const headers = {
 
 /* ---------------- GET TEAMS ---------------- */
 
-export const getTeams = async () => {
+export const getTeams = async (event: any) => {
+  const organizationId = getOrganizationId(event);
+
   const result = await db.send(
     new ScanCommand({
       TableName: TABLE,
+      FilterExpression:
+        "attribute_not_exists(organizationId) OR organizationId = :orgId",
+      ExpressionAttributeValues: {
+        ":orgId": organizationId,
+      },
     }),
   );
 
@@ -30,9 +38,11 @@ export const getTeams = async () => {
 
 export const createTeam = async (event: any) => {
   const body = JSON.parse(event.body);
+  const organizationId = getOrganizationId(event);
 
   const item = {
     id: uuid(),
+    organizationId,
     name: body.name,
     lead: body.lead,
     members: body.members,
@@ -95,10 +105,16 @@ export const updateTeam = async (event: any) => {
 
 export const filterTeams = async (event: any) => {
   const projects = Number(event.queryStringParameters?.projects || 0);
+  const organizationId = getOrganizationId(event);
 
   const result = await db.send(
     new ScanCommand({
       TableName: TABLE,
+      FilterExpression:
+        "attribute_not_exists(organizationId) OR organizationId = :orgId",
+      ExpressionAttributeValues: {
+        ":orgId": organizationId,
+      },
     }),
   );
 
@@ -117,10 +133,17 @@ export const filterTeams = async (event: any) => {
 
 /* ---------------- EXPORT TEAMS ---------------- */
 
-export const exportTeams = async () => {
+export const exportTeams = async (event: any) => {
+  const organizationId = getOrganizationId(event);
+
   const result = await db.send(
     new ScanCommand({
       TableName: TABLE,
+      FilterExpression:
+        "attribute_not_exists(organizationId) OR organizationId = :orgId",
+      ExpressionAttributeValues: {
+        ":orgId": organizationId,
+      },
     }),
   );
 
