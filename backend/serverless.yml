@@ -1,0 +1,469 @@
+service: sustainhub-backend
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-south-1
+
+  deploymentBucket:
+    name: sustainhub-serverless-deployments
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "*"
+
+  environment:
+    EMISSIONS_TABLE: emissions
+    ENERGY_TABLE: EnergyTable
+    WATER_TABLE: WaterTable
+    WASTE_TABLE: WasteTable
+    SUPPLIERS_TABLE: SuppliersTable
+    COMPLIANCE_TABLE: ComplianceTable
+    GOALS_TABLE: GoalsTable
+    TEAMS_TABLE: TeamsTable
+    REPORTS_TABLE: ReportsTable
+    CORS_ORIGIN: "*"
+    OPENAI_API_KEY: "test"
+
+functions:
+  health:
+    handler: src/handlers/health.handler
+    events:
+      - http:
+          path: health
+          method: get
+          cors: true
+
+  # Emissions
+  getEmissions:
+    handler: src/handlers/emissions.getEmissions
+    events:
+      - http:
+          path: emissions
+          method: get
+          cors: true
+
+  createEmission:
+    handler: src/handlers/emissions.createEmission
+    events:
+      - http:
+          path: emissions
+          method: post
+          cors: true
+
+  deleteEmission:
+    handler: src/handlers/deleteEmission.handler
+    events:
+      - http:
+          path: emissions/{id}
+          method: delete
+          cors: true
+
+  # Energy
+  getEnergy:
+    handler: src/handlers/energy.getEnergy
+    events:
+      - http:
+          path: energy
+          method: get
+          cors: true
+
+  createEnergy:
+    handler: src/handlers/energy.createEnergyRecord
+    events:
+      - http:
+          path: energy
+          method: post
+          cors: true
+
+  deleteEnergy:
+    handler: src/handlers/energy.deleteEnergyRecord
+    events:
+      - http:
+          path: energy/{id}
+          method: delete
+          cors: true
+
+  # Water
+  getWater:
+    handler: src/handlers/water.getWater
+    events:
+      - http:
+          path: water
+          method: get
+          cors: true
+
+  createWater:
+    handler: src/handlers/water.createWater
+    events:
+      - http:
+          path: water
+          method: post
+          cors: true
+
+  deleteWater:
+    handler: src/handlers/water.deleteWater
+    events:
+      - http:
+          path: water/{id}
+          method: delete
+          cors: true
+
+  # Waste
+  getWaste:
+    handler: src/handlers/waste.getWaste
+    events:
+      - http:
+          path: waste
+          method: get
+          cors: true
+
+  createWaste:
+    handler: src/handlers/waste.createWaste
+    events:
+      - http:
+          path: waste
+          method: post
+          cors: true
+
+  deleteWaste:
+    handler: src/handlers/waste.deleteWaste
+    events:
+      - http:
+          path: waste/{id}
+          method: delete
+          cors: true
+
+  # Suppliers
+  getSuppliers:
+    handler: src/handlers/suppliers.getSuppliers
+    events:
+      - http:
+          path: suppliers
+          method: get
+          cors: true
+
+  createSupplier:
+    handler: src/handlers/suppliers.createSupplier
+    events:
+      - http:
+          path: suppliers
+          method: post
+          cors: true
+
+  assessSupplier:
+    handler: src/handlers/suppliers.assessSupplier
+    events:
+      - http:
+          path: suppliers/{id}/assess
+          method: put
+          cors: true
+
+  deleteSupplier:
+    handler: src/handlers/suppliers.deleteSupplier
+    events:
+      - http:
+          path: suppliers/{id}
+          method: delete
+          cors: true
+
+  # Compliance
+  getCompliance:
+    handler: src/handlers/compliance.getCompliance
+    events:
+      - http:
+          path: compliance
+          method: get
+          cors: true
+
+  createCompliance:
+    handler: src/handlers/compliance.createCompliance
+    events:
+      - http:
+          path: compliance
+          method: post
+          cors: true
+
+  updateCompliance:
+    handler: src/handlers/compliance.updateCompliance
+    events:
+      - http:
+          path: compliance/{id}
+          method: put
+          cors: true
+
+  deleteCompliance:
+    handler: src/handlers/compliance.deleteCompliance
+    events:
+      - http:
+          path: compliance/{id}
+          method: delete
+          cors: true
+
+  getRecommendations:
+    handler: src/handlers/compliance.getRecommendations
+    events:
+      - http:
+          path: compliance/recommendations
+          method: get
+          cors: true
+
+  # Goals
+  getGoals:
+    handler: src/handlers/goals.getGoals
+    events:
+      - http:
+          path: goals
+          method: get
+          cors: true
+
+  createGoal:
+    handler: src/handlers/goals.createGoal
+    events:
+      - http:
+          path: goals
+          method: post
+          cors: true
+
+  updateGoal:
+    handler: src/handlers/goals.updateGoal
+    events:
+      - http:
+          path: goals/{id}
+          method: put
+          cors: true
+
+  deleteGoal:
+    handler: src/handlers/goals.deleteGoal
+    events:
+      - http:
+          path: goals/{id}
+          method: delete
+          cors: true
+
+  filterGoals:
+    handler: src/handlers/goals.filterGoals
+    events:
+      - http:
+          path: goals/filter
+          method: get
+          cors: true
+
+  exportGoals:
+    handler: src/handlers/goals.exportGoals
+    events:
+      - http:
+          path: goals/export
+          method: get
+          cors: true
+
+  # Teams
+  getTeams:
+    handler: src/handlers/teams.getTeams
+    events:
+      - http:
+          path: teams
+          method: get
+          cors: true
+
+  createTeam:
+    handler: src/handlers/teams.createTeam
+    events:
+      - http:
+          path: teams
+          method: post
+          cors: true
+
+  updateTeam:
+    handler: src/handlers/teams.updateTeam
+    events:
+      - http:
+          path: teams/{id}
+          method: put
+          cors: true
+
+  filterTeams:
+    handler: src/handlers/teams.filterTeams
+    events:
+      - http:
+          path: teams/filter
+          method: get
+          cors: true
+
+  exportTeams:
+    handler: src/handlers/teams.exportTeams
+    events:
+      - http:
+          path: teams/export
+          method: get
+          cors: true
+
+  # Reports
+  getReports:
+    handler: src/handlers/reports.getReports
+    events:
+      - http:
+          path: reports
+          method: get
+          cors: true
+
+  createReport:
+    handler: src/handlers/reports.createReport
+    events:
+      - http:
+          path: reports
+          method: post
+          cors: true
+
+  filterReports:
+    handler: src/handlers/reports.filterReports
+    events:
+      - http:
+          path: reports/filter
+          method: get
+          cors: true
+
+  exportReports:
+    handler: src/handlers/reports.exportReports
+    events:
+      - http:
+          path: reports/export
+          method: get
+          cors: true
+
+  downloadReport:
+    handler: src/handlers/reports.downloadReport
+    events:
+      - http:
+          path: reports/{id}/download
+          method: get
+          cors: true
+
+  generateReport:
+    handler: src/handlers/reports.generateReport
+    events:
+      - http:
+          path: reports/generate
+          method: post
+          cors: true
+
+plugins:
+  - serverless-offline
+
+resources:
+  Resources:
+    EmissionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.EMISSIONS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    EnergyTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ENERGY_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    WaterTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.WATER_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    WasteTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.WASTE_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    SuppliersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.SUPPLIERS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    ComplianceTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.COMPLIANCE_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    GoalsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.GOALS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    TeamsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TEAMS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    ReportsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.REPORTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
