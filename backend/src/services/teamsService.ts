@@ -40,7 +40,10 @@ export async function createTeam(
     lead: data.lead!,
     members: data.members || [],
     responsibilities: data.responsibilities || [],
+    activeProjects: data.activeProjects || [],
     projectsActive: Number(data.projectsActive || 0),
+    focusArea: data.focusArea || "General",
+    budget: Number(data.budget || 0),
   };
 
   await db.send(new PutCommand({ TableName: TABLE, Item: item }));
@@ -62,7 +65,7 @@ export async function updateTeam(
       TableName: TABLE,
       Key: { userId, id },
       UpdateExpression:
-        "SET #name = :name, #lead = :lead, members = :members, responsibilities = :resp, projectsActive = :projects",
+        "SET #name = :name, #lead = :lead, members = :members, responsibilities = :resp, activeProjects = :activeProjects, projectsActive = :projects, focusArea = :focusArea, budget = :budget",
       ExpressionAttributeNames: {
         "#name": "name", // reserved word
         "#lead": "lead",
@@ -72,7 +75,10 @@ export async function updateTeam(
         ":lead": data.lead,
         ":members": data.members,
         ":resp": data.responsibilities,
+        ":activeProjects": data.activeProjects || [],
         ":projects": Number(data.projectsActive),
+        ":focusArea": data.focusArea || "General",
+        ":budget": Number(data.budget || 0),
       },
       ReturnValues: "ALL_NEW",
     }),

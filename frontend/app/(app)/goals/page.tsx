@@ -11,7 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Download, TrendingUp, Target } from "lucide-react";
-import api, { Goal, Emission, EnergyRecord } from "@/lib/api";
+import api, {
+  Goal,
+  Emission,
+  EnergyRecord,
+  RecommendationRecord,
+} from "@/lib/api";
 import AddGoalModal from "@/components/add-goal-modal";
 
 export default function GoalsPage() {
@@ -20,6 +25,9 @@ export default function GoalsPage() {
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<
+    RecommendationRecord[]
+  >([]);
   const [metrics, setMetrics] = useState<{
     emissions: Emission[];
     energy: EnergyRecord[];
@@ -27,7 +35,7 @@ export default function GoalsPage() {
     emissions: [],
     energy: [],
   });
-  const [autoUpdated, setAutoUpdated] = useState(false);
+
 
   // ── Data loading ───────────────────────────────────────────────
   async function loadGoals() {
@@ -71,6 +79,19 @@ export default function GoalsPage() {
     loadMetrics();
   }, []);
 
+  useEffect(() => {
+    async function loadRecs() {
+      try {
+        const data = await api.getRecommendations();
+        setRecommendations((data || []).slice(0, 5));
+      } catch (err) {
+        console.error("Failed to load recommendations for goals page", err);
+        setRecommendations([]);
+      }
+    }
+    loadRecs();
+  }, []);
+
   // ── Derived values ─────────────────────────────────────────────
   const filteredGoals = useMemo(() => {
     if (filterCategory === "all") return goals;
@@ -93,43 +114,6 @@ export default function GoalsPage() {
       totalEnergy > 0 ? Math.round((renewableEnergy / totalEnergy) * 100) : 0;
     return { totalEmissions, totalEnergy, renewableShare };
   }, [metrics]);
-
-  // ── Auto-progress model (runs once when data is ready) ─────────
-  useEffect(() => {
-    if (autoUpdated || goals.length === 0) return;
-    if (!metrics.emissions.length && !metrics.energy.length) return;
-
-    async function updateFromModel() {
-      try {
-        const updates = goals.map((g) => {
-          let progress = g.progress;
-
-          if (g.category === "carbon") {
-            const baseline = aggregated.totalEmissions || 1;
-            progress = Math.round(Math.min((g.target / baseline) * 100, 100));
-          } else if (g.category === "energy") {
-            const targetShare = g.target || 100;
-            if (targetShare > 0) {
-              progress = Math.round(
-                Math.min((aggregated.renewableShare / targetShare) * 100, 100),
-              );
-            }
-          }
-
-          return { id: g.id!, progress };
-        });
-
-        await Promise.all(updates.map((u) => api.updateGoal(u.id, u.progress)));
-        await loadGoals();
-      } catch (err) {
-        console.error("Auto-progress update failed", err);
-      } finally {
-        setAutoUpdated(true);
-      }
-    }
-
-    updateFromModel();
-  }, [goals, metrics, aggregated, autoUpdated]);
 
   // ── Handlers ───────────────────────────────────────────────────
   function exportGoals() {
@@ -193,13 +177,13 @@ export default function GoalsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Goals & Targets</h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Track sustainability targets and team progress
           </p>
         </div>
         <div className="flex gap-2">
           <select
-            className="border rounded p-2"
+            className="border rounded p-2 bg-background"
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
@@ -238,13 +222,15 @@ export default function GoalsPage() {
         ].map(({ label, value, sub }) => (
           <Card key={label}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {label}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{value}</div>
-              {sub && <p className="text-xs text-gray-500 mt-2">{sub}</p>}
+              {sub && (
+                <p className="text-xs text-muted-foreground mt-2">{sub}</p>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -350,17 +336,32 @@ export default function GoalsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {[
-            { icon: "green", text: "Accelerate renewable energy deployment" },
-            { icon: "yellow", text: "Strengthen waste reduction initiatives" },
-            { icon: "green", text: "Supply chain carbon accounting" },
-          ].map(({ icon, text }) => (
+          {recommendations.length === 0 && (
+            <div className="text-sm text-muted-foreground">
+              No recommendations yet. Add data (emissions/energy/water/waste) to
+              generate suggestions.
+            </div>
+          )}
+          {recommendations.map((r) => (
             <div
-              key={text}
-              className="p-3 border rounded-lg flex items-center gap-2"
+              key={r.id || r.title}
+              className="p-3 border rounded-lg flex items-start gap-2"
             >
-              <TrendingUp className={`h-4 w-4 text-${icon}-600`} />
-              {text}
+              <TrendingUp
+                className={
+                  r.priority === "high"
+                    ? "h-4 w-4 text-red-600"
+                    : r.priority === "medium"
+                      ? "h-4 w-4 text-amber-600"
+                      : "h-4 w-4 text-green-600"
+                }
+              />
+              <div className="min-w-0">
+                <div className="font-medium">{r.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  {r.description}
+                </div>
+              </div>
             </div>
           ))}
         </CardContent>

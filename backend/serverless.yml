@@ -31,10 +31,24 @@ provider:
     GOALS_TABLE: GoalsTable
     TEAMS_TABLE: TeamsTable
     REPORTS_TABLE: ReportsTable
+    ALERTS_TABLE: AlertsTable
+    RECOMMENDATIONS_TABLE: RecommendationsTable
     CORS_ORIGIN: "*"
-    OPENAI_API_KEY: "test"
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ""}
+    OPENAI_MODEL: ${env:OPENAI_MODEL, "gpt-4.1-mini"}
+    ANOMALY_MODEL_URL: ${env:ANOMALY_MODEL_URL, ""}
     COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, ""}
     COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID, ""}
+
+# ─────────────────────────────────────────────
+# Esbuild configuration
+# ─────────────────────────────────────────────
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    external:
+      - pdfkit
 
 # ─────────────────────────────────────────────
 # Cognito authorizer — attach to every protected route
@@ -414,6 +428,17 @@ functions:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref CognitoAuthorizer
 
+  deleteTeam:
+    handler: src/handlers/teams.deleteTeam
+    events:
+      - http:
+          path: teams/{id}
+          method: delete
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
   exportTeams:
     handler: src/handlers/teams.exportTeams
     events:
@@ -487,6 +512,52 @@ functions:
       - http:
           path: reports/generate
           method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  # ── Alerts ─────────────────────────────────
+  getAlerts:
+    handler: src/handlers/alerts.getAlerts
+    events:
+      - http:
+          path: alerts
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  checkAnomalies:
+    handler: src/handlers/alerts.checkAnomalies
+    events:
+      - http:
+          path: alerts/check-anomalies
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  updateAlert:
+    handler: src/handlers/alerts.updateAlert
+    events:
+      - http:
+          path: alerts/{id}
+          method: put
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  # ── Recommendations ────────────────────────
+  getDashboardRecommendations:
+    handler: src/handlers/recommendations.getRecommendations
+    events:
+      - http:
+          path: recommendations
+          method: get
           cors: true
           authorizer:
             type: COGNITO_USER_POOLS
@@ -646,6 +717,38 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${self:provider.environment.REPORTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    AlertsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ALERTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    RecommendationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.RECOMMENDATIONS_TABLE}
         AttributeDefinitions:
           - AttributeName: userId
             AttributeType: S

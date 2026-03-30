@@ -16,8 +16,9 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { db } from "./dynamo";
 import { TABLES } from "../utils/env";
+import { EnergyRecord } from "../models";
 
-export async function getAllEnergy(userId: string) {
+export async function getAllEnergy(userId: string): Promise<EnergyRecord[]> {
   const res = await db.send(
     new QueryCommand({
       TableName: TABLES.ENERGY,
@@ -25,7 +26,7 @@ export async function getAllEnergy(userId: string) {
       ExpressionAttributeValues: { ":uid": userId },
     }),
   );
-  return res.Items || [];
+  return (res.Items || []) as EnergyRecord[];
 }
 
 export async function createEnergy(userId: string, data: any) {

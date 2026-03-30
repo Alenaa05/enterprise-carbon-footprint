@@ -8,7 +8,15 @@
  * - aws-config.ts should be DELETED — AWS credentials do not belong in the frontend
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+
+if (!API_BASE) {
+  // Fail fast with a clear error rather than silently sending requests to 'undefined/...'
+  console.error(
+    "[api.ts] NEXT_PUBLIC_API_BASE is not set. " +
+    "Add it to .env.local (http://localhost:4000/dev) or your hosting env vars."
+  );
+}
 
 function getToken(): string | null {
   // auth.ts stores the Cognito ID token here after login
@@ -16,6 +24,9 @@ function getToken(): string | null {
 }
 
 async function request(path: string, options: RequestInit = {}) {
+  if (!API_BASE) {
+    throw new Error("NEXT_PUBLIC_API_BASE is not configured. Check your .env.local or hosting environment variables.");
+  }
   const token = getToken();
 
   if (!token) {
@@ -282,6 +293,10 @@ async function updateTeam(id: string, payload: any) {
   });
 }
 
+async function deleteTeam(id: string) {
+  return request(`/teams/${id}`, { method: "DELETE" });
+}
+
 async function filterTeams(projects: number) {
   return request(`/teams/filter?projects=${projects}`);
 }
@@ -297,11 +312,35 @@ export type Report = {
   id?: string;
   title: string;
   generated: string;
+  type?: string;
+  status?: string;
   emissions: number;
   renewableEnergy: number;
   waterUsage: number;
   wasteRecycled: number;
   downloads?: number;
+};
+
+export type AlertRecord = {
+  id?: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: "high" | "medium" | "low";
+  affectedArea?: string;
+  status: "active" | "investigating" | "pending_action" | "resolved";
+  createdAt?: string;
+};
+
+export type RecommendationRecord = {
+  id?: string;
+  title: string;
+  description: string;
+  impact: string;
+  savings: string;
+  category: string;
+  priority: "high" | "medium" | "low";
+  createdAt?: string;
 };
 
 async function getReports(): Promise<Report[]> {
@@ -321,6 +360,33 @@ async function exportReports() {
 
 async function downloadReport(id: string) {
   return requestRaw(`/reports/${id}/download`);
+}
+
+/* =========================
+   ALERTS
+========================= */
+
+async function getAlerts(): Promise<AlertRecord[]> {
+  return request("/alerts");
+}
+
+async function checkAnomalies() {
+  return request("/alerts/check-anomalies", { method: "POST" });
+}
+
+async function updateAlert(id: string, status: AlertRecord["status"]) {
+  return request(`/alerts/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
+}
+
+/* =========================
+   RECOMMENDATIONS
+========================= */
+
+async function getRecommendations(): Promise<RecommendationRecord[]> {
+  return request("/recommendations");
 }
 
 /* =========================
@@ -355,10 +421,15 @@ export default {
   getTeams,
   createTeam,
   updateTeam,
+  deleteTeam,
   filterTeams,
   exportTeams,
   getReports,
   generateReport,
   exportReports,
   downloadReport,
+  getAlerts,
+  checkAnomalies,
+  updateAlert,
+  getRecommendations,
 };

@@ -6,6 +6,7 @@
  * to a deterministic rule-based engine so the feature always works.
  */
 import OpenAI from "openai";
+import { AI } from "../utils/env";
 
 function isRealKey(key: string | undefined): boolean {
   return !!key && key !== "test" && key.startsWith("sk-");
@@ -48,7 +49,6 @@ function generateRuleBasedRecommendations(items: any[]): string {
   let output = `## Sustainability Compliance Analysis\n\n`;
   output += `**Overall compliance rate: ${complianceRate}%** (${compliant}/${total} regulations met)\n\n`;
 
-  // Priority alerts
   if (nonCompliant > 0) {
     output += `### 🔴 Immediate Action Required\n`;
     output += `${nonCompliant} regulation${nonCompliant > 1 ? "s are" : " is"} non-compliant. `;
@@ -77,7 +77,6 @@ function generateRuleBasedRecommendations(items: any[]): string {
     output += `\n`;
   }
 
-  // Recommendations
   output += `### 💡 Recommendations\n\n`;
 
   if (complianceRate < 50) {
@@ -106,7 +105,7 @@ function generateRuleBasedRecommendations(items: any[]): string {
 export const generateRecommendations = async (
   items: any[],
 ): Promise<string> => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = AI.OPENAI_API_KEY;
 
   // Use OpenAI only if a real key is configured
   if (isRealKey(apiKey)) {
@@ -115,7 +114,7 @@ export const generateRecommendations = async (
       const prompt = `You are a sustainability compliance expert. Analyze this compliance data and provide specific, actionable recommendations in markdown format:\n\n${JSON.stringify(items, null, 2)}`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: AI.OPENAI_MODEL,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 800,
       });

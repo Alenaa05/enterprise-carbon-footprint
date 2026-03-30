@@ -61,9 +61,9 @@ export const serverError = (message = "Internal server error") => ({
   body: JSON.stringify({ message }),
 });
 
-/** Wraps a handler body; catches Unauthorized throws and maps them to 401 */
+/** Catches Unauthorized throws and maps them to 401.
+ * NOTE: "Not found" is intentionally excluded — handlers check that explicitly
+ * before calling isAuthError, so it returns a proper 404. */
 export function isAuthError(err: any): boolean {
-  return (
-    err?.message?.startsWith("Unauthorized") || err?.message === "Not found"
-  );
+  return err?.message?.startsWith("Unauthorized");
 }

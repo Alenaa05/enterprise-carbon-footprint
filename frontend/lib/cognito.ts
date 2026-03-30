@@ -6,7 +6,7 @@
  *
  * Add to frontend/.env.local:
  *   NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-south-1_BoZTplkeB
- *   NEXT_PUBLIC_COGNITO_CLIENT_ID=7jph3efr5dql1jri2e0f7pvtga
+ *   NEXT_PUBLIC_COGNITO_CLIENT_ID=shrrsv0l5e490fdi3atps987t
  *   NEXT_PUBLIC_COGNITO_REGION=ap-south-1
  */
 
