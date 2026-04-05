@@ -1,90 +1,85 @@
-🌱 SustainHub – Enterprise Sustainability Management Platform
-SustainHub is a full-stack web application designed to help organizations track, manage, and improve sustainability metrics across operations. It integrates emissions tracking, energy usage, compliance, reporting, and more into a single dashboard.
+# 🌱 SustainHub  
+### Enterprise Sustainability Management Platform
 
-🚀 Features
-📊 Dashboard
-Overview of sustainability metrics
+SustainHub is a full-stack web application designed to help organizations track, manage, and improve sustainability metrics across operations.
 
-Alerts & recommendations
+It integrates:
+- 🌿 Emissions tracking  
+- ⚡ Energy usage  
+- 📜 Compliance  
+- 📊 Reporting  
+- 📦 Supply chain insights  
 
-Real-time data insights
+All in a **single unified dashboard**.
 
-🌿 Carbon Emissions
-Track emissions by source
+---
 
-Add, view, and delete records
+## 🚀 Features
 
-Historical data tracking
+### 📊 Dashboard
+- Overview of sustainability metrics  
+- Alerts & recommendations  
+- Real-time data insights  
 
-⚡ Energy Management
-Monitor energy consumption
+### 🌿 Carbon Emissions
+- Track emissions by source  
+- Add, view, and delete records  
+- Historical data tracking  
 
-Renewable vs non-renewable tracking
+### ⚡ Energy Management
+- Monitor energy consumption  
+- Renewable vs non-renewable tracking  
 
-💧 Water Tracking
-Track water usage across facilities
+### 💧 Water Tracking
+- Track water usage across facilities  
+- Analyze consumption trends  
 
-Analyze consumption trends
+### ♻️ Waste Management
+- Record waste generation  
+- Track recycling performance  
 
-♻️ Waste Management
-Record waste generation
+### 🏭 Supply Chain
+- Manage suppliers  
+- Track sustainability metrics & certifications  
 
-Track recycling performance
+### 📜 Compliance & Regulations
+- Add and manage regulatory requirements  
+- Track audit status and due dates  
 
-🏭 Supply Chain
-Manage suppliers
+### 🎯 Goals & Targets
+- Set sustainability goals  
+- Track progress and performance  
 
-Track sustainability metrics & certifications
+### 👥 Team Collaboration
+- Create teams  
+- Assign projects and responsibilities  
 
-📜 Compliance & Regulations
-Add and manage regulatory requirements
+### 📄 Reports
+- Generate sustainability reports  
+- Export/download reports (PDF supported)  
 
-Track audit status and due dates
+### 🚨 Alerts & Recommendations
+- Detect anomalies  
+- AI-driven sustainability suggestions  
 
-🎯 Goals & Targets
-Set sustainability goals
+---
 
-Track progress and performance
+## 🏗️ Tech Stack
 
-👥 Team Collaboration
-Create teams
+| Layer          | Technology |
+|----------------|-----------|
+| **Frontend**   | Next.js, TypeScript, Tailwind CSS |
+| **Backend**    | Node.js (Serverless Framework), AWS Lambda, API Gateway |
+| **Database**   | AWS DynamoDB |
+| **Auth**       | AWS Cognito (JWT-based authentication) |
 
-Assign projects and responsibilities
+---
 
-📄 Reports
-Generate sustainability reports
+## ⚙️ Project Structure
 
-Export/download reports (PDF supported)
-
-🚨 Alerts & Recommendations
-Detect anomalies
-
-AI-driven sustainability suggestions
-
-🏗️ Tech Stack
-Frontend
-Next.js
-
-TypeScript
-
-Tailwind CSS (or your UI framework)
-
-Backend
-Node.js (Serverless Framework)
-
-AWS Lambda
-
-API Gateway
-
-Database
-AWS DynamoDB
-
-Authentication
-AWS Cognito (JWT-based authentication)
-
-⚙️ Project Structure
-/frontend        → Next.js application
-/backend         → Serverless backend (Lambda functions)
-  /services      → Business logic (DynamoDB operations)
-  /handlers      → API handlers
-  /utils         → Shared utilities (env, auth, etc.)
+```bash
+/frontend        # Next.js application
+/backend         # Serverless backend (Lambda functions)
+  /services      # Business logic (DynamoDB operations)
+  /handlers      # API handlers
+  /utils         # Shared utilities (env, auth, etc.)
