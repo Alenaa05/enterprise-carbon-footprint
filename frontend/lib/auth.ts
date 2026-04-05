@@ -1,12 +1,11 @@
 /**
  * auth.ts — Frontend Cognito auth helpers
  *
- * Uses the ID token (not access token) because:
- * - It contains the `sub` claim our backend uses as userId
- * - API Gateway Cognito authorizer accepts ID tokens
+ * Uses the ID token because:
+ * - It contains the `sub` claim many backends use as userId
+ * - Cognito authorizers can accept it
  *
  * Token is stored in sessionStorage["idToken"].
- * sessionStorage clears automatically when the tab closes.
  */
 import {
   CognitoUserPool,
@@ -21,10 +20,8 @@ export const userPool = new CognitoUserPool({
   ClientId: COGNITO.clientId,
 });
 
-/**
- * Login with email + password.
- * Stores the ID token in sessionStorage on success.
- */
+const TOKEN_KEY = "idToken";
+
 export function login(email: string, password: string): Promise<string> {
   const authDetails = new AuthenticationDetails({
     Username: email,
@@ -40,7 +37,7 @@ export function login(email: string, password: string): Promise<string> {
     cognitoUser.authenticateUser(authDetails, {
       onSuccess: (session: CognitoUserSession) => {
         const idToken = session.getIdToken().getJwtToken();
-        sessionStorage.setItem("idToken", idToken);
+        sessionStorage.setItem(TOKEN_KEY, idToken);
         resolve(idToken);
       },
       onFailure: (err) => reject(err),
@@ -49,10 +46,6 @@ export function login(email: string, password: string): Promise<string> {
   });
 }
 
-/**
- * Returns the current ID token, refreshing silently if expired.
- * Returns null if the user is not logged in.
- */
 export function getSession(): Promise<string | null> {
   return new Promise((resolve) => {
     const cognitoUser = userPool.getCurrentUser();
@@ -64,29 +57,25 @@ export function getSession(): Promise<string | null> {
     cognitoUser.getSession(
       (err: Error | null, session: CognitoUserSession | null) => {
         if (err || !session?.isValid()) {
+          sessionStorage.removeItem(TOKEN_KEY);
           resolve(null);
           return;
         }
+
         const idToken = session.getIdToken().getJwtToken();
-        sessionStorage.setItem("idToken", idToken);
+        sessionStorage.setItem(TOKEN_KEY, idToken);
         resolve(idToken);
       },
     );
   });
 }
 
-/**
- * Clears sessionStorage and signs out from Cognito.
- */
 export function logout(): void {
-  sessionStorage.removeItem("idToken");
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
   userPool.getCurrentUser()?.signOut();
 }
 
-/**
- * Returns true if a token exists in sessionStorage.
- * Quick synchronous check — use getSession() for a verified check.
- */
 export function isLoggedIn(): boolean {
-  return !!sessionStorage.getItem("idToken");
+  return !!sessionStorage.getItem(TOKEN_KEY);
 }

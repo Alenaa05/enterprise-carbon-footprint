@@ -1,50 +1,86 @@
 /**
  * api.ts — Frontend API client
  *
- * Fixes applied:
- * - LOCAL_USER_ID and x-user-id header removed entirely — identity comes from JWT only
- * - getToken() now reads from sessionStorage (set by auth.ts after Cognito login)
- * - All export-style fetch calls unified to use the shared request() function
- * - aws-config.ts should be DELETED — AWS credentials do not belong in the frontend
+ * Notes:
+ * - No AWS access key or secret belongs in the frontend
+ * - Auth is sent as Cognito Bearer token only
+ * - Reads token from sessionStorage first, then falls back to Cognito localStorage keys
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 if (!API_BASE) {
-  // Fail fast with a clear error rather than silently sending requests to 'undefined/...'
   console.error(
-    "[api.ts] NEXT_PUBLIC_API_BASE is not set. " +
-    "Add it to .env.local (http://localhost:4000/dev) or your hosting env vars."
+    "[api.ts] NEXT_PUBLIC_API_BASE is not set. Add it to .env.local or hosting env vars."
   );
 }
 
 function getToken(): string | null {
-  // auth.ts stores the Cognito ID token here after login
-  return sessionStorage.getItem("idToken");
+  if (typeof window === "undefined") return null;
+
+  const sessionToken = sessionStorage.getItem("idToken");
+  if (sessionToken) return sessionToken;
+
+  const localToken =
+    localStorage.getItem("idToken") || localStorage.getItem("accessToken");
+  if (localToken) return localToken;
+
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (!clientId) return null;
+
+  const lastAuthUser = localStorage.getItem(
+    `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`
+  );
+  if (!lastAuthUser) return null;
+
+  const cognitoIdToken = localStorage.getItem(
+    `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`
+  );
+  if (cognitoIdToken) return cognitoIdToken;
+
+  const cognitoAccessToken = localStorage.getItem(
+    `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.accessToken`
+  );
+  return cognitoAccessToken || null;
+}
+
+function clearStoredTokens() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem("idToken");
+  sessionStorage.removeItem("accessToken");
+  localStorage.removeItem("idToken");
+  localStorage.removeItem("accessToken");
 }
 
 async function request(path: string, options: RequestInit = {}) {
   if (!API_BASE) {
-    throw new Error("NEXT_PUBLIC_API_BASE is not configured. Check your .env.local or hosting environment variables.");
+    throw new Error("NEXT_PUBLIC_API_BASE is not configured. Check your .env.local.");
   }
-  const token = getToken();
 
+  const token = getToken();
   if (!token) {
     throw new Error("Not authenticated");
   }
 
+  const mergedHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {}),
+  };
+
+  console.log("[api] request", {
+    url: `${API_BASE}${path}`,
+    hasToken: !!token,
+    method: options.method || "GET",
+  });
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
+    headers: mergedHeaders,
   });
 
   if (res.status === 401) {
-    // Token expired — clear session and redirect to login
-    sessionStorage.removeItem("idToken");
+    clearStoredTokens();
     window.location.href = "/login";
     throw new Error("Session expired");
   }
@@ -54,18 +90,40 @@ async function request(path: string, options: RequestInit = {}) {
     throw new Error(text || `API error ${res.status}`);
   }
 
-  return res.json();
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return res.json();
+  }
+
+  return res.text();
 }
 
-// Shared fetch helper for binary responses (exports, downloads)
 async function requestRaw(path: string): Promise<Response> {
-  const token = getToken();
+  if (!API_BASE) {
+    throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
+  }
 
-  if (!token) throw new Error("Not authenticated");
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  console.log("[api] raw request", {
+    url: `${API_BASE}${path}`,
+    hasToken: !!token,
+  });
 
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
+
+  if (res.status === 401) {
+    clearStoredTokens();
+    window.location.href = "/login";
+    throw new Error("Session expired");
+  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -120,7 +178,10 @@ async function getEnergy(): Promise<EnergyRecord[]> {
 }
 
 async function createEnergy(record: Partial<EnergyRecord>) {
-  return request("/energy", { method: "POST", body: JSON.stringify(record) });
+  return request("/energy", {
+    method: "POST",
+    body: JSON.stringify(record),
+  });
 }
 
 async function deleteEnergy(id: string) {
@@ -144,7 +205,10 @@ async function getWater(): Promise<WaterRecord[]> {
 }
 
 async function createWater(record: Partial<WaterRecord>) {
-  return request("/water", { method: "POST", body: JSON.stringify(record) });
+  return request("/water", {
+    method: "POST",
+    body: JSON.stringify(record),
+  });
 }
 
 async function deleteWater(id: string) {
@@ -167,7 +231,10 @@ async function getWaste(): Promise<WasteRecord[]> {
 }
 
 async function createWaste(data: Partial<WasteRecord>) {
-  return request("/waste", { method: "POST", body: JSON.stringify(data) });
+  return request("/waste", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 async function deleteWaste(id: string) {
@@ -193,7 +260,10 @@ async function getSuppliers(): Promise<Supplier[]> {
 }
 
 async function createSupplier(data: Partial<Supplier>) {
-  return request("/suppliers", { method: "POST", body: JSON.stringify(data) });
+  return request("/suppliers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 async function assessSupplier(id: string) {
@@ -227,7 +297,10 @@ async function getGoals(): Promise<Goal[]> {
 }
 
 async function createGoal(goal: Partial<Goal>) {
-  return request("/goals", { method: "POST", body: JSON.stringify(goal) });
+  return request("/goals", {
+    method: "POST",
+    body: JSON.stringify(goal),
+  });
 }
 
 async function updateGoal(id: string, progress: number) {
@@ -283,7 +356,10 @@ async function getTeams() {
 }
 
 async function createTeam(payload: any) {
-  return request("/teams", { method: "POST", body: JSON.stringify(payload) });
+  return request("/teams", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 async function updateTeam(id: string, payload: any) {
@@ -362,10 +438,13 @@ async function downloadReport(id: string) {
   return requestRaw(`/reports/${id}/download`);
 }
 
+async function deleteReport(id: string) {
+  return request(`/reports/${id}`, { method: "DELETE" });
+}
+
 /* =========================
    ALERTS
 ========================= */
-
 async function getAlerts(): Promise<AlertRecord[]> {
   return request("/alerts");
 }
@@ -384,15 +463,11 @@ async function updateAlert(id: string, status: AlertRecord["status"]) {
 /* =========================
    RECOMMENDATIONS
 ========================= */
-
 async function getRecommendations(): Promise<RecommendationRecord[]> {
   return request("/recommendations");
 }
 
-/* =========================
-   EXPORT
-========================= */
-export default {
+const api = {
   getEmissions,
   createEmission,
   deleteEmission,
@@ -428,8 +503,11 @@ export default {
   generateReport,
   exportReports,
   downloadReport,
+  deleteReport,
   getAlerts,
   checkAnomalies,
   updateAlert,
   getRecommendations,
 };
+
+export default api;

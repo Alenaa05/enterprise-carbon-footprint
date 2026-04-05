@@ -9,7 +9,11 @@ const CORS_HEADERS = {
 export const handler = async () => {
   return {
     statusCode: 200,
-    headers: CORS_HEADERS,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Credentials": "true",
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ message: "SustainHub backend running 🚀" }),
   };
 };
